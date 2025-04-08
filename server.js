@@ -15,7 +15,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 console.log("MONGO_URI from env:", process.env.MONGO_URI);
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGO_URI, {
+mongoose.connect('mongodb+srv://admin:admin@studentdata.edgjrm2.mongodb.net/?retryWrites=true&w=majority&appName=studentdata', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => console.log('✅ MongoDB Connected'))
