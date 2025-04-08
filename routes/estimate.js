@@ -11,17 +11,22 @@ const loadData = () => fs.existsSync(dataPath) ? JSON.parse(fs.readFileSync(data
 const saveData = (data) => fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
 
 // POST: Save new payload
-router.post('/', (req, res) => {
-  const payload = req.body;
-  const valid = validatePayload(payload);
-  if (!valid.success) return res.status(400).json({ message: valid.message });
-
-  const existing = loadData();
-  existing.push(payload);
-  saveData(existing);
-
-  res.status(200).json({ message: 'Payload saved', data: payload });
-});
+app.post('/data', (req, res) => {
+    const newData = req.body;
+  
+    if (Array.isArray(newData)) {
+      newData.forEach(item => {
+        item.id = idCounter++;
+        data.push(item);
+      });
+    } else {
+      newData.id = idCounter++;
+      data.push(newData);
+    }
+  
+    res.status(201).json({ message: 'Data added successfully', data });
+  });
+  
 
 // GET: View all payloads
 router.get('/', (req, res) => {

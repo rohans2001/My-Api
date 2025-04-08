@@ -2,64 +2,75 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
 
+app.use(express.static('public'));
 app.use(bodyParser.json());
 
 let savedData = []; // In-memory storage
+let idCounter = 1;
 
-// Create
-// POST: Add one or more data entries
+// POST: Add one or multiple data entries
 app.post('/data', (req, res) => {
-    const newData = req.body;
-  
-    if (Array.isArray(newData)) {
-      // If multiple objects sent
-      data.push(...newData);
-    } else {
-      // If single object sent
-      data.push(newData);
-    }
-  
-    res.status(201).json({ message: 'Data added successfully', data });
-  });
-  
+  const newData = req.body;
 
-// Read all
-app.get('/estimate', (req, res) => {
+  const assignId = (entry) => ({
+    id: idCounter++,
+    ...entry,
+  });
+
+  if (Array.isArray(newData)) {
+    const entriesWithIds = newData.map(assignId);
+    savedData.push(...entriesWithIds);
+    res.status(201).json({ message: 'Multiple data entries added', data: entriesWithIds });
+  } else {
+    const entryWithId = assignId(newData);
+    savedData.push(entryWithId);
+    res.status(201).json({ message: 'Single data entry added', data: entryWithId });
+  }
+});
+
+// GET: View all data
+app.get('/data', (req, res) => {
   res.json(savedData);
 });
 
-// Update whole entry
-app.put('/estimate/:index', (req, res) => {
-  const index = parseInt(req.params.index);
-  if (index >= 0 && index < savedData.length) {
-    savedData[index] = req.body;
-    res.json({ message: 'Data replaced successfully!' });
+// PUT: Replace entry completely
+app.put('/data/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const index = savedData.findIndex(item => item.id === id);
+
+  if (index !== -1) {
+    savedData[index] = { id, ...req.body };
+    res.json({ message: 'Data replaced successfully', data: savedData[index] });
   } else {
     res.status(404).json({ message: 'Data not found' });
   }
 });
 
-// Partial update
-app.patch('/estimate/:index', (req, res) => {
-  const index = parseInt(req.params.index);
-  if (index >= 0 && index < savedData.length) {
+// PATCH: Update entry partially
+app.patch('/data/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const index = savedData.findIndex(item => item.id === id);
+
+  if (index !== -1) {
     savedData[index] = { ...savedData[index], ...req.body };
-    res.json({ message: 'Data updated successfully!' });
+    res.json({ message: 'Data updated successfully', data: savedData[index] });
   } else {
     res.status(404).json({ message: 'Data not found' });
   }
 });
 
-// Delete
-app.delete('/estimate/:index', (req, res) => {
-  const index = parseInt(req.params.index);
-  if (index >= 0 && index < savedData.length) {
-    savedData.splice(index, 1);
-    res.json({ message: 'Data deleted successfully!' });
+// DELETE: Remove entry
+app.delete('/data/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const index = savedData.findIndex(item => item.id === id);
+
+  if (index !== -1) {
+    const deleted = savedData.splice(index, 1);
+    res.json({ message: 'Data deleted successfully', data: deleted[0] });
   } else {
     res.status(404).json({ message: 'Data not found' });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
