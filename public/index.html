@@ -1,40 +1,139 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My API Data Viewer</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Data Viewer</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 2rem; }
-    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
-    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
-    th { background-color: #f5f5f5; }
-    button { margin-top: 1rem; padding: 0.5rem 1rem; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 10px;
+      text-align: center;
+    }
+    input[type="text"] {
+      padding: 5px;
+      width: 90%;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .input-row input {
+      flex: 1;
+    }
+    button {
+      padding: 6px 12px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <h1>Data from My API</h1>
-  <button onclick="loadData()">Refresh</button>
-  <table id="data-table">
+
+  <h1>📦 Live Data Viewer</h1>
+
+  <div class="input-row">
+    <input type="text" id="name" placeholder="Name" />
+    <input type="text" id="value" placeholder="Value" />
+    <button onclick="addData()">➕ Add</button>
+  </div>
+
+  <table id="dataTable">
     <thead>
-      <tr><th>ID</th><th>Name</th><th>Value</th></tr>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Value</th>
+        <th>Actions</th>
+      </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      <!-- Data rows will be inserted here -->
+    </tbody>
   </table>
 
   <script>
-    async function loadData() {
+    async function fetchData() {
       const res = await fetch('/data');
       const data = await res.json();
-      const tbody = document.querySelector('#data-table tbody');
+      const tbody = document.querySelector('#dataTable tbody');
       tbody.innerHTML = '';
 
       data.forEach(item => {
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${item.id}</td><td>${item.name || '-'}</td><td>${item.value || '-'}</td>`;
+        row.innerHTML = `
+          <td>${item.id}</td>
+          <td><input type="text" value="${item.name || ''}" id="name-${item.id}" disabled /></td>
+          <td><input type="text" value="${item.value || ''}" id="value-${item.id}" disabled /></td>
+          <td>
+            <button onclick="deleteData(${item.id})">🗑️</button>
+            <button onclick="editData(${item.id})" id="edit-btn-${item.id}">✏️</button>
+          </td>
+        `;
         tbody.appendChild(row);
       });
     }
 
-    window.onload = loadData;
+    async function addData() {
+      const name = document.getElementById('name').value;
+      const value = document.getElementById('value').value;
+      if (!name || !value) return alert('Both fields are required');
+
+      await fetch('/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, value })
+      });
+
+      document.getElementById('name').value = '';
+      document.getElementById('value').value = '';
+      fetchData();
+    }
+
+    async function deleteData(id) {
+      await fetch(`/data/${id}`, { method: 'DELETE' });
+      fetchData();
+    }
+
+    function editData(id) {
+      const nameInput = document.getElementById(`name-${id}`);
+      const valueInput = document.getElementById(`value-${id}`);
+      const editBtn = document.getElementById(`edit-btn-${id}`);
+
+      if (editBtn.textContent === '✏️') {
+        nameInput.disabled = false;
+        valueInput.disabled = false;
+        editBtn.textContent = '💾';
+      } else {
+        saveEdit(id, nameInput.value, valueInput.value);
+      }
+    }
+
+    async function saveEdit(id, name, value) {
+      await fetch(`/data/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, value })
+      });
+      fetchData();
+    }
+
+    // Load data on page load
+    fetchData();
   </script>
 </body>
 </html>
