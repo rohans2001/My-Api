@@ -7,10 +7,21 @@ app.use(bodyParser.json());
 let savedData = []; // In-memory storage
 
 // Create
-app.post('/estimate', (req, res) => {
-  savedData.push(req.body);
-  res.status(201).json({ message: 'Data saved successfully!' });
-});
+// POST: Add one or more data entries
+app.post('/data', (req, res) => {
+    const newData = req.body;
+  
+    if (Array.isArray(newData)) {
+      // If multiple objects sent
+      data.push(...newData);
+    } else {
+      // If single object sent
+      data.push(newData);
+    }
+  
+    res.status(201).json({ message: 'Data added successfully', data });
+  });
+  
 
 // Read all
 app.get('/estimate', (req, res) => {
