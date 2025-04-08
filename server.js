@@ -1,76 +1,77 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const path = require('path');
 const app = express();
 
-app.use(express.static('public'));
 app.use(bodyParser.json());
+app.use(express.static('public'));
 
-let savedData = []; // In-memory storage
+let data = [];
 let idCounter = 1;
 
-// POST: Add one or multiple data entries
 app.post('/data', (req, res) => {
-  const newData = req.body;
+  const newEntry = req.body;
 
-  const assignId = (entry) => ({
-    id: idCounter++,
-    ...entry,
-  });
-
-  if (Array.isArray(newData)) {
-    const entriesWithIds = newData.map(assignId);
-    savedData.push(...entriesWithIds);
-    res.status(201).json({ message: 'Multiple data entries added', data: entriesWithIds });
-  } else {
-    const entryWithId = assignId(newData);
-    savedData.push(entryWithId);
-    res.status(201).json({ message: 'Single data entry added', data: entryWithId });
+  if (!newEntry.name || !newEntry.class || !newEntry.date) {
+      return res.status(400).json({ message: 'Name, class, and date are required.' });
   }
+
+  const student = {
+      id: idCounter++,
+      name: newEntry.name,
+      class: newEntry.class,
+      date: newEntry.date,
+  };
+
+  data.push(student);
+  res.status(201).json(student);
 });
 
-// GET: View all data
+
+// GET: View all students
 app.get('/data', (req, res) => {
-  res.json(savedData);
+  res.json(data);
 });
 
-// PUT: Replace entry completely
+// PUT: Replace student data by ID
 app.put('/data/:id', (req, res) => {
   const id = parseInt(req.params.id);
-  const index = savedData.findIndex(item => item.id === id);
+  const { name, class: studentClass } = req.body;
+  const index = data.findIndex((student) => student.id === id);
 
-  if (index !== -1) {
-    savedData[index] = { id, ...req.body };
-    res.json({ message: 'Data replaced successfully', data: savedData[index] });
-  } else {
-    res.status(404).json({ message: 'Data not found' });
+  if (index === -1) {
+    return res.status(404).json({ message: 'Student not found' });
   }
+
+  data[index] = { id, name, class: studentClass };
+  res.json({ message: 'Student updated', student: data[index] });
 });
 
-// PATCH: Update entry partially
+// PATCH: Partially update student data
 app.patch('/data/:id', (req, res) => {
   const id = parseInt(req.params.id);
-  const index = savedData.findIndex(item => item.id === id);
+  const student = data.find((s) => s.id === id);
 
-  if (index !== -1) {
-    savedData[index] = { ...savedData[index], ...req.body };
-    res.json({ message: 'Data updated successfully', data: savedData[index] });
-  } else {
-    res.status(404).json({ message: 'Data not found' });
+  if (!student) {
+    return res.status(404).json({ message: 'Student not found' });
   }
+
+  Object.assign(student, req.body);
+  res.json({ message: 'Student partially updated', student });
 });
 
-// DELETE: Remove entry
+// DELETE: Remove student by ID
 app.delete('/data/:id', (req, res) => {
   const id = parseInt(req.params.id);
-  const index = savedData.findIndex(item => item.id === id);
+  const index = data.findIndex((student) => student.id === id);
 
-  if (index !== -1) {
-    const deleted = savedData.splice(index, 1);
-    res.json({ message: 'Data deleted successfully', data: deleted[0] });
-  } else {
-    res.status(404).json({ message: 'Data not found' });
+  if (index === -1) {
+    return res.status(404).json({ message: 'Student not found' });
   }
+
+  const deleted = data.splice(index, 1);
+  res.json({ message: 'Student deleted', student: deleted[0] });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
