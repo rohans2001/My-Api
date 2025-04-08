@@ -24,6 +24,7 @@ window.onclick = (e) => { if (e.target == modal) modal.style.display = "none"; }
 async function fetchStudents() {
   const res = await fetch(apiUrl);
   students = await res.json();
+  console.log("Fetched students:", students); // 🐞 Debug log
   renderTable();
 }
 
@@ -96,7 +97,8 @@ form.onsubmit = async (e) => {
   }
 
   modal.style.display = "none";
-  fetchStudents();
+  await fetchStudents(); // ✅ This must run after the POST/PATCH
+
 };
 
 async function editStudent(id) {

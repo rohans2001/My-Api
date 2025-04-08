@@ -1,0 +1,16 @@
+# Node.js dependencies
+node_modules/
+
+# dotenv file (sensitive credentials)
+.env
+
+# Logs
+logs/
+*.log
+
+# Optional OS-specific stuff
+.DS_Store
+Thumbs.db
+
+# VSCode settings (optional)
+.vscode/

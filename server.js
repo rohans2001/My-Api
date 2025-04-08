@@ -1,77 +1,85 @@
 const express = require('express');
-const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+const cors = require('cors');
 const path = require('path');
+require('dotenv').config();
+
 const app = express();
-
-app.use(bodyParser.json());
-app.use(express.static('public'));
-
-let data = [];
-let idCounter = 1;
-
-app.post('/data', (req, res) => {
-  const newEntry = req.body;
-
-  if (!newEntry.name || !newEntry.class || !newEntry.date) {
-      return res.status(400).json({ message: 'Name, class, and date are required.' });
-  }
-
-  const student = {
-      id: idCounter++,
-      name: newEntry.name,
-      class: newEntry.class,
-      date: newEntry.date,
-  };
-
-  data.push(student);
-  res.status(201).json(student);
-});
-
-
-// GET: View all students
-app.get('/data', (req, res) => {
-  res.json(data);
-});
-
-// PUT: Replace student data by ID
-app.put('/data/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const { name, class: studentClass } = req.body;
-  const index = data.findIndex((student) => student.id === id);
-
-  if (index === -1) {
-    return res.status(404).json({ message: 'Student not found' });
-  }
-
-  data[index] = { id, name, class: studentClass };
-  res.json({ message: 'Student updated', student: data[index] });
-});
-
-// PATCH: Partially update student data
-app.patch('/data/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const student = data.find((s) => s.id === id);
-
-  if (!student) {
-    return res.status(404).json({ message: 'Student not found' });
-  }
-
-  Object.assign(student, req.body);
-  res.json({ message: 'Student partially updated', student });
-});
-
-// DELETE: Remove student by ID
-app.delete('/data/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const index = data.findIndex((student) => student.id === id);
-
-  if (index === -1) {
-    return res.status(404).json({ message: 'Student not found' });
-  }
-
-  const deleted = data.splice(index, 1);
-  res.json({ message: 'Student deleted', student: deleted[0] });
-});
-
 const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// MongoDB Connection
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => console.log('✅ MongoDB Connected'))
+  .catch(err => console.error('❌ MongoDB connection error:', err));
+
+// Schema and Model
+const studentSchema = new mongoose.Schema({
+  id: { type: Number, unique: true, required: true },
+  name: String,
+  class: Number,
+  date: String
+});
+const Student = mongoose.model('Student', studentSchema);
+
+// Helper: Auto-increment ID
+async function getNextId() {
+  const last = await Student.findOne().sort({ id: -1 });
+  return last ? last.id + 1 : 1;
+}
+
+// API Routes
+app.get('/data', async (req, res) => {
+  const students = await Student.find().sort({ id: 1 });
+  res.json(students);
+});
+
+app.post('/data', async (req, res) => {
+  let data = req.body;
+  if (!Array.isArray(data)) data = [data];
+
+  const studentsToSave = [];
+  for (let entry of data) {
+    const id = await getNextId();
+    studentsToSave.push({ id, ...entry });
+  }
+
+  try {
+    const saved = await Student.insertMany(studentsToSave);
+    res.status(201).json(saved);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/data/:id', async (req, res) => {
+  try {
+    const updated = await Student.findOneAndUpdate({ id: +req.params.id }, req.body, { new: true });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/data/:id', async (req, res) => {
+  try {
+    await Student.findOneAndDelete({ id: +req.params.id });
+    res.json({ message: 'Student deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Only needed if you're handling SPA or want all other routes to go to index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
+});
+
+// Start server
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
