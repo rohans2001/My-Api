@@ -27,7 +27,15 @@ const studentSchema = new mongoose.Schema({
   name: String,
   class: Number,
   date: String
+}, {
+  toJSON: {
+    transform(doc, ret) {
+      delete ret._id;
+      delete ret.__v;
+    }
+  }
 });
+
 const Student = mongoose.model('Student', studentSchema);
 
 // Helper: Auto-increment ID
