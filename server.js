@@ -12,7 +12,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-console.log("MONGO_URI from env:", process.env.MONGO_URI);
+// Debug: Show MongoDB URI (Optional – comment out in production)
+// console.log("MONGO_URI from env:", process.env.MONGO_URI);
 
 // MongoDB Connection
 mongoose.connect('mongodb+srv://admin:admin@studentdata.edgjrm2.mongodb.net/?retryWrites=true&w=majority&appName=studentdata', {
@@ -86,13 +87,12 @@ app.delete('/data/:id', async (req, res) => {
   }
 });
 
-// Only needed if you're handling SPA or want all other routes to go to index.html
+// Fallback route for SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
-//Start Server
-const PORT = process.env.PORT || 3000;
+// Start Server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
 });
